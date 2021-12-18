@@ -74,10 +74,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         SleepData dataBean = new SleepData();
-        ArrayList<SleepHorizontalAxis> oList = new ArrayList<>();
-        oList.add(new SleepHorizontalAxis(SleepBean.TYPE_SLEEP_DEEP, "深度睡眠", 4));
-        oList.add(new SleepHorizontalAxis(SleepBean.TYPE_SLEEP_SHALLOW, "浅度睡眠", 4));
-        oList.add(new SleepHorizontalAxis(SleepBean.TYPE_SLEEP_SOBER, "清醒", 2));
+        ArrayList<SleepVerticalAxis> oList = new ArrayList<>();
+        oList.add(new SleepVerticalAxis(SleepBean.TYPE_SLEEP_DEEP, "深度睡眠", 4));
+        oList.add(new SleepVerticalAxis(SleepBean.TYPE_SLEEP_SHALLOW, "浅度睡眠", 4));
+        oList.add(new SleepVerticalAxis(SleepBean.TYPE_SLEEP_SOBER, "清醒", 2));
         dataBean.setVerticalPercentage(oList);
         mOrientationBar.addPaint(SleepBean.TYPE_SLEEP_DEEP,0xff993344);
         mOrientationBar.addPaint(SleepBean.TYPE_SLEEP_SHALLOW,0xff663344);

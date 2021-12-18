@@ -13,7 +13,6 @@ import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author ly-huangql
@@ -133,6 +132,13 @@ public class OrientationBar extends View {
     }
 
 
+    /**
+     * 1。先画坐标轴
+     * 2。绘制分区，同时计算保存每个type的y1,y2用于绘制数据的矩形
+     * 3。绘制横轴文字
+     * 4。绘制数据
+     * @param canvas
+     */
     private void drawHorizontalAxis(Canvas canvas) {
         //计算原点
         float height = 0;
@@ -159,7 +165,7 @@ public class OrientationBar extends View {
         canvas.drawLine(0, height, endX, height, horizontalLinePaint);
         //记录对应type的y高度
         HashMap<String, Ycoordinate> YMap = new HashMap<>();
-        ArrayList<SleepHorizontalAxis> verticalPercentage = mDataBean.getVerticalPercentage();
+        ArrayList<SleepVerticalAxis> verticalPercentage = mDataBean.getVerticalPercentage();
         if (verticalPercentage.size() > 0) {
             canvas.drawText(verticalPercentage.get(0).getText(), mAxisEndX, mAxisStartY, verticalTextPaint);
             //按高度比例画横线

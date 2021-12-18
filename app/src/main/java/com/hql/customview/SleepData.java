@@ -17,9 +17,12 @@ public class SleepData {
     /**
      * 画横线的高度比例，max为10
      */
-    private ArrayList<SleepHorizontalAxis> verticalPercentage = new ArrayList<>();
+    private ArrayList<SleepVerticalAxis> verticalPercentage = new ArrayList<>();
 
 
+    /**
+     * 数据列表
+     */
     private ArrayList<SleepBean> sleepBeans = new ArrayList<>();
 
     public ArrayList<String> getHorizontalAxisTex() {
@@ -39,11 +42,11 @@ public class SleepData {
         this.sleepBeans = sleepBeans;
     }
 
-    public ArrayList<SleepHorizontalAxis> getVerticalPercentage() {
+    public ArrayList<SleepVerticalAxis> getVerticalPercentage() {
         return verticalPercentage;
     }
 
-    public void setVerticalPercentage(ArrayList<SleepHorizontalAxis> verticalPercentage) {
+    public void setVerticalPercentage(ArrayList<SleepVerticalAxis> verticalPercentage) {
         this.verticalPercentage = verticalPercentage;
     }
 }

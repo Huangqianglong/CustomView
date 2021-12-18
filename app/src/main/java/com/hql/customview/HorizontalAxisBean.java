@@ -3,7 +3,7 @@ package com.hql.customview;
 /**
  * @author ly-huangql
  * <br /> Create time : 2021/12/15
- * <br /> Description :
+ * <br /> Description :柱形图的横向数据
  */
 public class HorizontalAxisBean {
     private String text;

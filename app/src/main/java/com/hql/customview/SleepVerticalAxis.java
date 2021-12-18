@@ -3,13 +3,22 @@ package com.hql.customview;
 /**
  * @author ly-huangql
  * <br /> Create time : 2021/12/17
- * <br /> Description :
+ * <br /> Description : 睡眠数据
  */
-public class SleepHorizontalAxis {
+public class SleepVerticalAxis {
+    /**
+     * 睡眠数据类型：深睡 浅睡 清醒
+     */
     String type;
+    /**
+     * 纵轴右侧的文字
+     */
     String text;
+    /**
+     * 占横轴的百分比
+     */
     int percent;
-    public SleepHorizontalAxis(String type, String text,int persent) {
+    public SleepVerticalAxis(String type, String text, int persent) {
         this.type = type;
         this.text = text;
         this.percent = persent;
