@@ -1,4 +1,4 @@
-package com.hql.customview;
+package com.hql.customview.sleepChart;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -11,13 +11,15 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
+import com.hql.customview.ViewUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
  * @author ly-huangql
  * <br /> Create time : 2021/12/17
- * <br /> Description :
+ * <br /> Description :睡眠时段表
  */
 public class OrientationBar extends View {
     private static final String TAG = "OrientationBar";
@@ -100,7 +102,7 @@ public class OrientationBar extends View {
         verticalTextPaint.setAntiAlias(true);
         verticalTextPaint.setTextSize(28f);
 
-        segmentPaint= new Paint();
+        segmentPaint = new Paint();
         segmentPaint.setColor(Color.WHITE);
         segmentPaint.setAntiAlias(true);
         segmentPaint.setTextSize(28f);
@@ -137,9 +139,13 @@ public class OrientationBar extends View {
      * 2。绘制分区，同时计算保存每个type的y1,y2用于绘制数据的矩形
      * 3。绘制横轴文字
      * 4。绘制数据
+     *
      * @param canvas
      */
     private void drawHorizontalAxis(Canvas canvas) {
+        if (null== mDataBean||(mDataBean.getHorizontalAxisTex().size() < 1 || mDataBean.getVerticalPercentage().size() < 1)) {
+            return;
+        }
         //计算原点
         float height = 0;
         if (mAxisStartY == 0) {
@@ -190,7 +196,7 @@ public class OrientationBar extends View {
 
                 YMap.put(verticalPercentage.get(j).getType(), ycoordinate);
             }
-            Log.d(TAG,"总高度:"+mAxisStartY);
+            Log.d(TAG, "总高度:" + mAxisStartY);
 
         }
 
@@ -224,10 +230,10 @@ public class OrientationBar extends View {
         for (int i = 0; i < sleepBeans.size(); i++) {
             String type = sleepBeans.get(i).getType();
             Ycoordinate ycoordinate = YMap.get(type);
-            percent=percent +sleepBeans.get(i).getPercent();
+            percent = percent + sleepBeans.get(i).getPercent();
             Rect rect = new Rect(valueStartX,
                     ycoordinate.yHeight,
-                    valueStartX+(int)(sleepBeans.get(i).getPercent() /100f* mAxisEndX),
+                    valueStartX + (int) (sleepBeans.get(i).getPercent() / 100f * mAxisEndX),
                     ycoordinate.yLow);
             segmentPaint.setColor(colorPaintMap.get(type));
             canvas.drawRect(
@@ -235,8 +241,8 @@ public class OrientationBar extends View {
                     segmentPaint
 
             );
-            valueStartX += (int)(sleepBeans.get(i).getPercent() /100f* mAxisEndX);
-            }
+            valueStartX += (int) (sleepBeans.get(i).getPercent() / 100f * mAxisEndX);
+        }
 
 
     }
@@ -255,8 +261,10 @@ public class OrientationBar extends View {
         int yHeight;
 
     }
-    HashMap<String,Integer> colorPaintMap = new HashMap<>();
-    public void addPaint(String type,int color){
-        colorPaintMap.put(type,color);
+
+    HashMap<String, Integer> colorPaintMap = new HashMap<>();
+
+    public void addPaint(String type, int color) {
+        colorPaintMap.put(type, color);
     }
 }

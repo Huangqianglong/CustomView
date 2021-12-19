@@ -6,15 +6,20 @@
     android:background="#121327"
     tools:context=".MainActivity">
 
-    <com.hql.customview.BarCharts
+    <com.hql.customview.chart.BarCharts
         android:id="@+id/barchart"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone"
         />
 
-    <com.hql.customview.OrientationBar
+    <com.hql.customview.sleepChart.OrientationBar
         android:id="@+id/origBar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <com.hql.customview.heartbeat.CurveView
+        android:id="@+id/cureView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 </RelativeLayout>

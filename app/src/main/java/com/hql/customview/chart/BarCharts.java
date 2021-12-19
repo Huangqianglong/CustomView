@@ -1,4 +1,4 @@
-package com.hql.customview;
+package com.hql.customview.chart;
 
 import android.content.Context;
 import android.graphics.BlurMaskFilter;
@@ -15,6 +15,9 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+
+import com.hql.customview.OnItemSelectListener;
+import com.hql.customview.ViewUtils;
 
 import java.util.ArrayList;
 
@@ -285,7 +288,10 @@ public class BarCharts extends View {
      */
     private void drawHorizontalAxis(Canvas canvas) {
         Log.d(TAG, "drawHorizontalAxis");
-        float height = 0;
+        if (null== mDataBean||(mDataBean.getVerticalAxisData().size() <1 || mDataBean.getHorizontalAxisData().size() < 1)){
+            return;
+        }
+            float height = 0;
         if (mAxisStartY == 0) {
             height = mViewHeight - (18 + ViewUtils.getLineHeight(horizontalTextPaint));
             mAxisStartY = height;

@@ -1,4 +1,4 @@
-package com.hql.customview;
+package com.hql.customview.chart;
 
 import java.util.ArrayList;
 
