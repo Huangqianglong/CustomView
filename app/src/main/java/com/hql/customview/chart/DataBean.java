@@ -20,7 +20,16 @@ public class DataBean {
      * 横轴数据
      */
     private ArrayList<HorizontalAxisBean> mHorizontalAxisData;
+
+    /**
+     * 纵轴文字
+     */
     private ArrayList<String> mVerticalAxisData;
+    /**
+     * 不绑定的横轴文字
+     */
+    private ArrayList<String> mOnlyHorizontalAxisText = new ArrayList<>();
+
 
     public DataBean(ArrayList<HorizontalAxisBean> mHorizontalAxisData, ArrayList<String> mVerticalAxisData) {
         this.mHorizontalAxisData = mHorizontalAxisData;
@@ -57,5 +66,18 @@ public class DataBean {
 
     public void setVerticalMinData(int verticalMinData) {
         this.verticalMinData = verticalMinData;
+    }
+
+    public void setHorizontalAxisTextBind(ArrayList<String> texts) {
+
+        mOnlyHorizontalAxisText.clear();
+        if (null != texts) {
+            mOnlyHorizontalAxisText.addAll(texts);
+        }
+    }
+
+
+    public ArrayList<String> getOnlyHorizontalAxisText() {
+        return mOnlyHorizontalAxisText;
     }
 }

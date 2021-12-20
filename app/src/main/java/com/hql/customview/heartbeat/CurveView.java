@@ -3,6 +3,7 @@ package com.hql.customview.heartbeat;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -21,7 +22,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import com.hql.customview.OnItemSelectListener;
-import com.hql.customview.ViewUtils;
+import com.hql.uitls.LoggerUtil;
+import com.hql.uitls.ViewUtils;
 
 import java.util.ArrayList;
 
@@ -64,11 +66,11 @@ public class CurveView extends View {
     /**
      * 圆环颜色
      */
-    private int circleRingColor= Color.parseColor("#FFFFFF");
+    private int circleRingColor = Color.parseColor("#FFFFFF");
     /**
      * 圆心颜色
      */
-    private int circlePointColor= Color.parseColor("#3B97A3");
+    private int circlePointColor = Color.parseColor("#3B97A3");
     /**
      * 画阴影
      */
@@ -102,6 +104,15 @@ public class CurveView extends View {
      */
     private int mHighlightIndex;
     private LinearGradient mShader;
+    /**
+     * 纵轴虚线画笔
+     */
+    private Paint verticalDottedPaint;
+    /**
+     * 虚线颜色
+     */
+    private int dottedColor = 0xff2FCAE8;
+    private int verticalTextPadding = 26;
 
     public CurveView(Context context) {
         super(context);
@@ -127,6 +138,7 @@ public class CurveView extends View {
         //横轴线
         horizontalLinePaint = new Paint();
         horizontalLinePaint.setColor(horizontalLineColor);
+        horizontalLinePaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SCREEN));
         horizontalLinePaint.setAntiAlias(true);
         //横轴文字
         horizontalTextPaint = new Paint();
@@ -176,6 +188,12 @@ public class CurveView extends View {
                 new int[]{shadowColor1, shadowColor2}, new float[]{0.6f, 0.9f},
                 //Color.RED, 0xff000000,
                 Shader.TileMode.MIRROR);
+
+        //虚线
+        verticalDottedPaint = new Paint();
+        verticalDottedPaint.setColor(dottedColor);
+        verticalDottedPaint.setAntiAlias(true);
+        verticalDottedPaint.setPathEffect(new DashPathEffect(new float[]{8, 8}, 0));
     }
 
     @Override
@@ -233,13 +251,33 @@ public class CurveView extends View {
         }
 
         //间距
-        float interval ;
+        float interval;
 
 
+        ArrayList<HeartBeatBean> points = mData.getHeartBeatData();
+        interval = mAxisStartY / mData.getVerticalAxisTex().size();
+
+
+//        //画纵向的几个横线 和纵轴的文字
+        if (mData.getVerticalAxisTex().size() == 0) {
+            canvas.drawLine(0, height, endX, height, horizontalLinePaint);
+        } else {
+            ArrayList<String> textList = mData.getVerticalAxisTex();
+            int i = 0;
+            horizontalLinePaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
+            while (height > 0) {
+                canvas.drawLine(0, height, endX, height, horizontalLinePaint);
+                if (i < textList.size()) {
+                    canvas.drawText(textList.get(i), endX + verticalTextPadding, height, verticalTextPaint);
+                }
+                i++;
+                height = height - interval;
+                //Log.d(TAG, "1划线间距  :" + interval + ">>y:" + height);
+            }
+        }
         // 曲线
         Path curPath = new Path();
         Path path2 = new Path();
-        ArrayList<Integer> points = mData.getHeartBeatData();
         interval = mAxisEndX / (points.size() - 1);
         for (int i = 0; i < points.size(); i++) {
             if (i > mClickRectList.size() - 1) {
@@ -249,13 +287,13 @@ public class CurveView extends View {
                         (int) mAxisStartY
                 ));
             }
-            float y = mData.getHeartBeatData().get(i) / mData.getMaxData() * mAxisStartY;
+            float y = mAxisStartY - mData.getHeartBeatData().get(i).getRate() / mData.getMaxData() * mAxisStartY;
 
             Point startPoint = new Point((int) (interval * i), (int) y);
             Point nextPoint = new Point();
             if (i != points.size() - 1) {
                 float yNext;
-                yNext = mData.getHeartBeatData().get(i + 1) / mData.getMaxData() * mAxisStartY;
+                yNext = mAxisStartY - mData.getHeartBeatData().get(i + 1).getRate() / mData.getMaxData() * mAxisStartY;
 
                 nextPoint = new Point((int) (interval * (i + 1)), (int) yNext);
 
@@ -291,8 +329,8 @@ public class CurveView extends View {
                 //Log.d(TAG, "(" + interval * i + "," + y + ")" + ">>>end" + mAxisEndX + ">>interval:" + interval);
             } else {
                 //   if (i == points.size() ){
-                y = mData.getHeartBeatData().get(mData.getHeartBeatData().size() - 1) / mData.getMaxData() * mAxisStartY;
-                canvas.drawCircle(mAxisEndX, y, 3, horizontalLinePaint);
+//                y = mData.getHeartBeatData().get(mData.getHeartBeatData().size() - 1) / mData.getMaxData() * mAxisStartY;
+//                canvas.drawCircle(mAxisEndX, y, 3, horizontalLinePaint);
 
 //                /**连接到终点x,底部y*/
 //                curPath.lineTo(mAxisEndX, mAxisStartY);
@@ -307,7 +345,7 @@ public class CurveView extends View {
                 /**连接到起点x,底部y*/
                 path2.lineTo(0, 0);
                 /**连接到起点x,起点y*/
-                path2.lineTo(0, mAxisStartY - mData.getHeartBeatData().get(0) / mData.getMaxData() * mAxisStartY);
+                path2.lineTo(0, mAxisStartY - (mAxisStartY - mData.getHeartBeatData().get(0).getRate() / mData.getMaxData() * mAxisStartY));
             }
             //Log.d(TAG, "(" + interval * i + "," + y + ")" + ">>>end" + mAxisEndX + ">>interval:" + interval);
         }
@@ -324,19 +362,23 @@ public class CurveView extends View {
 
 
         //画纵向的几个横线 和纵轴的文字
+        height = mAxisStartY;
+        interval = mAxisStartY / mData.getVerticalAxisTex().size();
+
         if (mData.getVerticalAxisTex().size() == 0) {
-            canvas.drawLine(0, height, endX, height, verticalTextPaint);
+            canvas.drawLine(0, height, endX, height, horizontalLinePaint);
         } else {
             ArrayList<String> textList = mData.getVerticalAxisTex();
             int i = 0;
+            horizontalLinePaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_ATOP));
             while (height > 0) {
-                canvas.drawLine(0, height, endX, height, verticalTextPaint);
+                canvas.drawLine(0, height, endX, height, horizontalLinePaint);
                 if (i < textList.size()) {
-                    canvas.drawText(textList.get(i), endX + 5, height, verticalTextPaint);
+                    canvas.drawText(textList.get(i), endX + verticalTextPadding, height, verticalTextPaint);
                 }
                 i++;
                 height = height - interval;
-
+                //Log.d(TAG, "2划线间距  :" + interval + ">>y:" + height);
             }
         }
 
@@ -354,7 +396,6 @@ public class CurveView extends View {
                     horizontalTextPaint);
             intervalStart += textWith;
         }
-
 
     }
 
@@ -393,7 +434,7 @@ public class CurveView extends View {
 
                     for (int i = 0; i < mClickRectList.size(); i++) {
                         if (mClickRectList.get(i).contains(x, y)) {
-                            onItemSelect(i, x, y);
+                            onItemSelect(i);
                         }
                     }
                 }
@@ -405,7 +446,7 @@ public class CurveView extends View {
         return true;
     }
 
-    private void onItemSelect(int itemSelect, int x, int y) {
+    private void onItemSelect(int itemSelect) {
         Log.d(TAG, "选中 ：" + itemSelect);
         if (-1 != itemSelect) {
             drawHighlightChart(itemSelect);
@@ -430,13 +471,15 @@ public class CurveView extends View {
      * @param canvas
      */
     private void drawHighlightChart(Canvas canvas) {
-        ArrayList<Integer> points = mData.getHeartBeatData();
+        ArrayList<HeartBeatBean> points = mData.getHeartBeatData();
         float interval = mAxisEndX / (points.size() - 1);
-        float y = mData.getHeartBeatData().get(mHighlightIndex) / mData.getMaxData() * mAxisStartY;
+        float y = mAxisStartY - mData.getHeartBeatData().get(mHighlightIndex).getRate() / mData.getMaxData() * mAxisStartY;
         highlightPaint.setColor(circleRingColor);
         canvas.drawCircle(interval * mHighlightIndex, y, 10, highlightPaint);
         highlightPaint.setColor(circlePointColor);
         canvas.drawCircle(interval * mHighlightIndex, y, 6, highlightPaint);
+        canvas.drawLine(interval * mHighlightIndex, y, interval * mHighlightIndex, mAxisStartY, verticalDottedPaint);
+
     }
 
     private OnItemSelectListener mItemSelectListener;
@@ -455,6 +498,7 @@ public class CurveView extends View {
         shadowColor1 = color1;
         shadowColor2 = color2;
     }
+
     /**
      * 设置横轴背景线颜色
      *
@@ -464,5 +508,20 @@ public class CurveView extends View {
         this.horizontalLineColor = horizontalLineColor;
     }
 
+    public CurveData getData() {
+        return mData;
+    }
+
+    public void setPositionSelect(int position) {
+        int dataSize = mData.getHeartBeatData().size();
+        LoggerUtil.d(TAG, "setPositionSelect ：" + position+">>"+dataSize);
+        if (0 < dataSize && position < dataSize) {
+            LoggerUtil.d(TAG, "高亮 ：" + position);
+            drawHighlightChart(position);
+            if (null != mItemSelectListener) {
+                mItemSelectListener.onItemSelect(position);
+            }
+        }
+    }
 
 }

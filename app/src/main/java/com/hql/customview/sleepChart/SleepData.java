@@ -25,6 +25,15 @@ public class SleepData {
      */
     private ArrayList<SleepBean> sleepBeans = new ArrayList<>();
 
+    /**
+     * 睡眠总时长
+     */
+    private int maxData;
+    /**
+     * 日期
+     */
+    private String date;
+
     public ArrayList<String> getHorizontalAxisTex() {
         return horizontalAxisTex;
     }
@@ -48,5 +57,21 @@ public class SleepData {
 
     public void setVerticalPercentage(ArrayList<SleepVerticalAxis> verticalPercentage) {
         this.verticalPercentage = verticalPercentage;
+    }
+
+    public void setMaxData(int maxData) {
+        this.maxData = maxData;
+    }
+
+    public int getMaxData() {
+        return maxData;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
     }
 }

@@ -7,11 +7,14 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.Nullable;
 
-import com.hql.customview.ViewUtils;
+import com.hql.customview.OnItemSelectListener;
+import com.hql.uitls.LoggerUtil;
+import com.hql.uitls.ViewUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,7 +24,7 @@ import java.util.HashMap;
  * <br /> Create time : 2021/12/17
  * <br /> Description :睡眠时段表
  */
-public class OrientationBar extends View {
+public class SleepCharBar extends View {
     private static final String TAG = "OrientationBar";
     /**
      * 宽
@@ -63,23 +66,24 @@ public class OrientationBar extends View {
      */
     private Paint verticalTextPaint;
     private Paint segmentPaint;
+    private ArrayList<Rect> mClickRect = new ArrayList<>();
 
-    public OrientationBar(Context context) {
+    public SleepCharBar(Context context) {
         super(context);
         init();
     }
 
-    public OrientationBar(Context context, @Nullable AttributeSet attrs) {
+    public SleepCharBar(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public OrientationBar(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public SleepCharBar(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
 
-    public OrientationBar(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public SleepCharBar(Context context, @Nullable AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
         init();
     }
@@ -87,8 +91,8 @@ public class OrientationBar extends View {
     private void init() {
         //横轴线
         horizontalLinePaint = new Paint();
-        //horizontalLinePaint.setColor(horizontalLineColor);
-        horizontalLinePaint.setColor(Color.WHITE);
+        horizontalLinePaint.setColor(horizontalLineColor);
+        //horizontalLinePaint.setColor(Color.WHITE);
         horizontalLinePaint.setAntiAlias(true);
         //横轴文字
         horizontalTextPaint = new Paint();
@@ -115,13 +119,13 @@ public class OrientationBar extends View {
         int w = ViewUtils.measureDimension(200, widthMeasureSpec);
         int h = ViewUtils.measureDimension(80, heightMeasureSpec);
         setMeasuredDimension(w, h);
-        Log.d(TAG, ">>onMeasure  w:" + w + ">>h:" + h);
+        LoggerUtil.d(TAG, ">>onMeasure  w:" + w + ">>h:" + h);
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        Log.d(TAG, ">>onSizeChanged");
+        LoggerUtil.d(TAG, ">>onSizeChanged");
         mViewWidth = w;
         mViewHeight = h;
     }
@@ -143,7 +147,7 @@ public class OrientationBar extends View {
      * @param canvas
      */
     private void drawHorizontalAxis(Canvas canvas) {
-        if (null== mDataBean||(mDataBean.getHorizontalAxisTex().size() < 1 || mDataBean.getVerticalPercentage().size() < 1)) {
+        if (null == mDataBean || (mDataBean.getHorizontalAxisTex().size() < 1 || mDataBean.getVerticalPercentage().size() < 1)) {
             return;
         }
         //计算原点
@@ -151,7 +155,7 @@ public class OrientationBar extends View {
         if (mAxisStartY == 0) {
             height = mViewHeight - (18 + ViewUtils.getLineHeight(horizontalTextPaint));
             mAxisStartY = height;
-            Log.d(TAG, ">>>>mViewHeight:" + mViewHeight + ">>mAxisStartY:" + mAxisStartY);
+            LoggerUtil.d(TAG, ">>>>mViewHeight:" + mViewHeight + ">>mAxisStartY:" + mAxisStartY);
         } else {
             height = mAxisStartY;
         }
@@ -189,14 +193,14 @@ public class OrientationBar extends View {
                 canvas.drawLine(0, height, endX, height, horizontalLinePaint);
 
                 if (size > j + 1) {
-                    //Log.d(TAG, "按比例画横线：" + height + ">>" + verticalPercentage.get(j + 1).getText());
+                    //LoggerUtil.d(TAG, "按比例画横线：" + height + ">>" + verticalPercentage.get(j + 1).getText());
                     canvas.drawText(verticalPercentage.get(j + 1).getText(), mAxisEndX + 15, height, verticalTextPaint);
                 }
-                //Log.d(TAG, "保存类型：" + verticalPercentage.get(j).getType()+">("+ycoordinate.yLow+","+ycoordinate.yHeight+")");
+                //LoggerUtil.d(TAG, "保存类型：" + verticalPercentage.get(j).getType()+">("+ycoordinate.yLow+","+ycoordinate.yHeight+")");
 
                 YMap.put(verticalPercentage.get(j).getType(), ycoordinate);
             }
-            Log.d(TAG, "总高度:" + mAxisStartY);
+            LoggerUtil.d(TAG, "总高度:" + mAxisStartY);
 
         }
 
@@ -205,11 +209,11 @@ public class OrientationBar extends View {
         int textWidth = 0;
         if (0 != horizontalTextData.size()) {
             textWidth = (int) horizontalTextPaint.measureText(horizontalTextData.get(0));
-            Log.d(TAG, "文字宽度" + textWidth);
+            LoggerUtil.d(TAG, "文字宽度" + textWidth);
         }
         float textStartX = 0;
         float horizontalInterval = (mAxisEndX - textWidth * horizontalTextData.size()) / (horizontalTextData.size() - 1);
-        Log.d(TAG, "宽度 " + horizontalInterval + ">>" + (mAxisEndX - textWidth * horizontalTextData.size())
+        LoggerUtil.d(TAG, "宽度 " + horizontalInterval + ">>" + (mAxisEndX - textWidth * horizontalTextData.size())
                 + ">>" + (horizontalTextData.size() - 1)
         );
         for (int i = 0; i < horizontalTextData.size(); i++) {
@@ -231,9 +235,10 @@ public class OrientationBar extends View {
             String type = sleepBeans.get(i).getType();
             Ycoordinate ycoordinate = YMap.get(type);
             percent = percent + sleepBeans.get(i).getPercent();
+            int right = valueStartX + (int) (sleepBeans.get(i).getPercent() / 100f * mAxisEndX);
             Rect rect = new Rect(valueStartX,
                     ycoordinate.yHeight,
-                    valueStartX + (int) (sleepBeans.get(i).getPercent() / 100f * mAxisEndX),
+                    right,
                     ycoordinate.yLow);
             segmentPaint.setColor(colorPaintMap.get(type));
             canvas.drawRect(
@@ -241,18 +246,72 @@ public class OrientationBar extends View {
                     segmentPaint
 
             );
+            if (mClickRect.size() < sleepBeans.size()) {
+                Rect rect1 = new Rect(valueStartX, 0, right, (int) mAxisEndX);
+                mClickRect.add(rect1);
+            }
             valueStartX += (int) (sleepBeans.get(i).getPercent() / 100f * mAxisEndX);
+
+        }
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int x = (int) event.getX();
+        int y = (int) event.getY();
+        int action = event.getAction();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                break;
+            case MotionEvent.ACTION_MOVE:
+                break;
+            case MotionEvent.ACTION_UP:
+                //LoggerUtil.d(TAG, "ACTION_UP事件");
+                if (x + getLeft() < getRight() && y + getTop() < getBottom() && x < mAxisEndX) {
+                    LoggerUtil.d(TAG, "点击事件 x:" + x+">>"+mClickRect.size());
+
+                    for (int i = 0; i < mClickRect.size(); i++) {
+                        //LoggerUtil.d(TAG, "contains x:" +mClickRect.get(i));
+                        if (mClickRect.get(i).contains(x, y)) {
+                            onItemSelect(i);
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
         }
 
+        return true;
+    }
+
+    private OnItemSelectListener mItemSelectListener;
+
+    public void setOnItemSelectListener(OnItemSelectListener listener) {
+        mItemSelectListener = listener;
+    }
+
+    private void onItemSelect(int itemSelect) {
+        LoggerUtil.d(TAG, "选中 ：" + itemSelect);
+        if (-1 != itemSelect) {
+            //drawHighlightChart(itemSelect);
+            if (null != mItemSelectListener) {
+                mItemSelectListener.onItemSelect(itemSelect);
+            }
+
+        }
 
     }
 
     private void drawBG(Canvas canvas) {
     }
-
+    public SleepData getData(){
+        return mDataBean;
+    }
     public void setDataBean(SleepData dataBean) {
         this.mDataBean = dataBean;
-        Log.d(TAG, "setDataBean");
+        mClickRect.clear();
+        LoggerUtil.d(TAG, "setDataBean");
         this.invalidate();
     }
 
@@ -266,5 +325,17 @@ public class OrientationBar extends View {
 
     public void addPaint(String type, int color) {
         colorPaintMap.put(type, color);
+    }
+
+    public void setPositionSelect(int position) {
+        int dataSize = mDataBean.getSleepBeans().size();
+        LoggerUtil.d(TAG, "setPositionSelect ：" + position + ">>" + dataSize);
+        if (0 < dataSize && position < dataSize) {
+            LoggerUtil.d(TAG, "高亮 ：" + position);
+
+            if (null != mItemSelectListener) {
+                mItemSelectListener.onItemSelect(position);
+            }
+        }
     }
 }

@@ -1,11 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.hql.customview.MyLinearlayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#121327"
+    android:orientation="vertical"
     tools:context=".MainActivity">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="柱形图"
+        android:textColor="@color/white"
+        android:textSize="30sp"
+        android:onClick="onCharBar"
+        />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="睡眠质量图"
+        android:textColor="@color/white"
+        android:textSize="30sp"
+        android:onClick="onSleepBar"
+        />
+    <TextView
+        android:text="心率图"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:textSize="30sp"
+        android:onClick="onCurveBar"
+        />
     <com.hql.customview.chart.BarCharts
         android:id="@+id/barchart"
         android:layout_width="match_parent"
@@ -13,13 +38,17 @@
         android:visibility="gone"
         />
 
-    <com.hql.customview.sleepChart.OrientationBar
+    <com.hql.customview.sleepChart.SleepCharBar
         android:id="@+id/origBar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        />
 
     <com.hql.customview.heartbeat.CurveView
         android:id="@+id/cureView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
-</RelativeLayout>
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        />
+</com.hql.customview.MyLinearlayout>

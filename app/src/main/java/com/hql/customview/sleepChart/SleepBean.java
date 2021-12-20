@@ -17,6 +17,7 @@ public class SleepBean {
     public final static String TYPE_SLEEP_DEEP = "TYPE_SLEEP_DEEP";
     public final static String TYPE_SLEEP_SHALLOW = "TYPE_SLEEP_SHALLOW";
     public final static String TYPE_SLEEP_SOBER = "TYPE_SLEEP_SOBER";
+    private String date;
 
     public SleepBean(int percent, String type) {
         this.percent = percent;
@@ -37,5 +38,13 @@ public class SleepBean {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
     }
 }

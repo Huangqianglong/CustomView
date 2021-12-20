@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:background="#121327"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<com.hql.customview.sleepChart.SleepCharBar
+    android:id="@+id/sleep_bar"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="gone"
+    />
+    <com.hql.customview.chart.BarCharts
+        android:id="@+id/bar"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+    <com.hql.customview.heartbeat.CurveView
+        android:id="@+id/cureView"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+</RelativeLayout>

@@ -47,6 +47,4 @@ public class SleepVerticalAxis {
     public void setPercent(int percent) {
         this.percent = percent;
     }
-
-
 }

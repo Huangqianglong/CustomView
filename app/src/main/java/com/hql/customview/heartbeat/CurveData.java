@@ -1,9 +1,5 @@
 package com.hql.customview.heartbeat;
 
-import android.widget.ArrayAdapter;
-
-import com.hql.customview.sleepChart.SleepVerticalAxis;
-
 import java.util.ArrayList;
 
 /**
@@ -25,7 +21,7 @@ public class CurveData {
      */
     private ArrayList<String> verticalAxisTex = new ArrayList<>();
 
-    private ArrayList<Integer> heartBeatData = new ArrayList<>();
+    private ArrayList<HeartBeatBean> heartBeatData = new ArrayList<>();
     private float maxData;
 
     public ArrayList<String> getHorizontalAxisTex() {
@@ -44,11 +40,11 @@ public class CurveData {
         return verticalAxisTex;
     }
 
-    public ArrayList<Integer> getHeartBeatData() {
+    public ArrayList<HeartBeatBean> getHeartBeatData() {
         return heartBeatData;
     }
 
-    public void setHeartBeatData(ArrayList<Integer> heartBeatData) {
+    public void setHeartBeatData(ArrayList<HeartBeatBean> heartBeatData) {
         this.heartBeatData = heartBeatData;
     }
 

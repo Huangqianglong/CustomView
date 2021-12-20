@@ -1,4 +1,4 @@
-package com.hql.customview;
+package com.hql.uitls;
 
 import android.graphics.Paint;
 import android.view.View;

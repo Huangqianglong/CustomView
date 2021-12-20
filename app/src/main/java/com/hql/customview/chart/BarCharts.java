@@ -7,6 +7,8 @@ import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.Shader;
 import android.util.AttributeSet;
@@ -16,15 +18,17 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
+
 import com.hql.customview.OnItemSelectListener;
-import com.hql.customview.ViewUtils;
+import com.hql.uitls.LoggerUtil;
+import com.hql.uitls.ViewUtils;
 
 import java.util.ArrayList;
 
 /**
  * @author ly-huangql
  * <br /> Create time : 2021/12/15
- * <br /> Description :
+ * <br /> Description : 柱形图
  */
 public class BarCharts extends View {
     boolean DEBUG = false;
@@ -41,11 +45,6 @@ public class BarCharts extends View {
      * 高
      */
     private int mViewHeight;
-    /**
-     * 分段进度条的颜色
-     */
-    private final int[] sectionColors = new int[]{0xFF6E87FF, 0xFF4FE5FD,
-            0xFFFFC54B, 0xFFFF6B6B};
 
     /**
      * 柱形图背景色
@@ -76,6 +75,10 @@ public class BarCharts extends View {
      * 横轴虚线画笔
      */
     private Paint horizontalDottedPaint;
+    /**
+     * 虚线颜色
+     */
+    private int dottedColor = 0xff2FCAE8;
 
     /**
      * 设置横轴背景线颜色
@@ -106,6 +109,7 @@ public class BarCharts extends View {
     private int paddingBarLeft = 15;
     private int paddingBarRight = 0;
 
+    private int paddingRight = 0;
 
     /**
      * 渐变色 - normal
@@ -175,6 +179,11 @@ public class BarCharts extends View {
      * 点击响应
      */
     private ArrayList<Rect> mClickRectList = new ArrayList<>();
+
+    /**
+     * 横轴文字区域
+     */
+    private ArrayList<Rect> mHorizontalTextList = new ArrayList<>();
     /**
      * 是否绘制高亮状态
      */
@@ -195,6 +204,19 @@ public class BarCharts extends View {
      * 是否颜色分段
      */
     private boolean isOpenMulti;
+
+    /**
+     * 底部文字距离
+     */
+    private int bottomTextMargin = 10;
+    /**
+     * 横向文字是否和数据绑定
+     */
+    private boolean bindWithHorizontalData = true;
+    /**
+     * 没有数据时，是否画柱形背景
+     */
+    private boolean drawCharBGNoData = true;
 
     public BarCharts(Context context) {
         super(context);
@@ -244,7 +266,7 @@ public class BarCharts extends View {
 
         //虚线
         horizontalDottedPaint = new Paint();
-        horizontalDottedPaint.setColor(shaderColorSelectStart);
+        horizontalDottedPaint.setColor(dottedColor);
         horizontalDottedPaint.setAntiAlias(true);
         horizontalDottedPaint.setPathEffect(new DashPathEffect(new float[]{8, 8}, 0));
         //光晕画笔
@@ -288,10 +310,10 @@ public class BarCharts extends View {
      */
     private void drawHorizontalAxis(Canvas canvas) {
         Log.d(TAG, "drawHorizontalAxis");
-        if (null== mDataBean||(mDataBean.getVerticalAxisData().size() <1 || mDataBean.getHorizontalAxisData().size() < 1)){
+        if (null == mDataBean || (mDataBean.getVerticalAxisData().size() < 1 || mDataBean.getHorizontalAxisData().size() < 1)) {
             return;
         }
-            float height = 0;
+        float height = 0;
         if (mAxisStartY == 0) {
             height = mViewHeight - (18 + ViewUtils.getLineHeight(horizontalTextPaint));
             mAxisStartY = height;
@@ -304,22 +326,27 @@ public class BarCharts extends View {
         float endX = 0;
         if (mAxisEndX == 0) {
             float textWidth = 60 + horizontalTextPaint.measureText(mDataBean.getVerticalAxisData().get(mDataBean.getVerticalAxisData().size() - 1)) + 5;
-            mAxisEndX = endX = mViewWidth - textWidth;
+            mAxisEndX = endX = mViewWidth - textWidth - paddingRight;
         } else {
             endX = mAxisEndX;
         }
 
         //画纵向的几个横线
-        float interval = mAxisStartY / mDataBean.getVerticalAxisData().size();
+        float interval = mAxisStartY / (mDataBean.getVerticalAxisData().size() - 1);
         if (mDataBean.getVerticalAxisData().size() == 0) {
             canvas.drawLine(0, height, endX, height, horizontalLinePaint);
         } else {
             while (height > 0) {
                 canvas.drawLine(0, height, endX, height, horizontalLinePaint);
                 height = height - interval;
+                if (height <= 0) {
+                    height = 1;
+                    canvas.drawLine(0, height, endX, height, horizontalLinePaint);
+                    break;
+                }
             }
         }
-        //画X轴文字
+        //画X轴数据
         ArrayList<HorizontalAxisBean> horizontalData = mDataBean.getHorizontalAxisData();
         float startX = 0;
         //每个柱形图的响应区间大小
@@ -350,14 +377,22 @@ public class BarCharts extends View {
                 rect = mCharBGRectList.get(i);
             }
 
+            //没有数据时，是否画柱形图的背景
+            //LoggerUtil.d(TAG, "drawCharBGNoData :" + drawCharBGNoData + ">>>value:" + drawCharBGNoData);
+            if (!drawCharBGNoData) {
+                if (horizontalData.get(i).getValue() != 0) {
+                    canvas.drawRect(rect, mCharBGPaint);
+                }
+            } else {
+                canvas.drawRect(rect, mCharBGPaint);
+            }
 
-            canvas.drawRect(rect, mCharBGPaint);
             //画柱形图
             //柱形
             Rect rectChart = null;
             if (i > mCharRectList.size() - 1) {
                 rectChart = new Rect((int) (paddingBarLeft + startX + halfResponseWith - mCharWidth / 2),
-                        (int) (horizontalData.get(i).getValue() / mDataBean.getVerticalMaxData() * mAxisStartY),
+                        (int) (mAxisStartY - horizontalData.get(i).getValue() / mDataBean.getVerticalMaxData() * mAxisStartY),
                         (int) (paddingBarLeft + startX + halfResponseWith + mCharWidth / 2),
                         (int) mAxisStartY);
                 mCharRectList.add(rectChart);
@@ -366,32 +401,49 @@ public class BarCharts extends View {
             }
             if (isOpenMulti) {
                 //分段色
-                drawMulti(canvas, rectChart);
+                drawMulti(canvas, rectChart, i);
             } else {
                 //渐变色
                 mShader = new LinearGradient(paddingBarLeft + startX + halfResponseWith - mCharWidth / 2,
                         //按比例计算高度
-                        horizontalData.get(i).getValue() / mDataBean.getVerticalMaxData() * mAxisStartY,
+                        mAxisStartY - horizontalData.get(i).getValue() / mDataBean.getVerticalMaxData() * mAxisStartY,
                         paddingBarLeft + startX + halfResponseWith + mCharWidth / 2,
                         mAxisStartY, shaderColorNormalStart, shaderColorNormalEnd, Shader.TileMode.CLAMP);
                 mCharPaint.setShader(mShader);
                 canvas.drawRect(rectChart, mCharPaint);
             }
-            //画文字
-            if (drawHorizontalAxisText) {
-                canvas.drawText(horizontalData.get(i).getText(),
-                        rectChart.left + mCharWidth / 2 - horizontalTextPaint.measureText(horizontalData.get(i).getText()) / 2,
-                        mViewHeight - 10,
-                        horizontalTextPaint);
-            } else {
-                if (i == 0 || i == horizontalData.size() - 1) {
+            //画横轴文字
+            //是否画横轴的文字
+
+            if (bindWithHorizontalData) {
+                //记录横轴文字区域
+                if (0 == i || i == horizontalData.size() - 1) {
+                    if (mHorizontalTextList.size() < 2) {
+                        float textWidth = horizontalTextPaint.measureText(horizontalData.get(i).getText());
+                        float x = rectChart.left + mCharWidth / 2 - horizontalTextPaint.measureText(horizontalData.get(i).getText()) / 2;
+                        Rect rectStr = new Rect((int) (x),
+                                (int) (mViewHeight - ViewUtils.getLineHeight(horizontalTextPaint)),
+                                (int) (x + textWidth),
+                                mViewHeight - bottomTextMargin + 5);
+                        mHorizontalTextList.add(rectStr);
+                    }
+                }
+                //LoggerUtil.d(TAG, "记录横轴文字区域 size" + mHorizontalTextList.size());
+                if (drawHorizontalAxisText) {
+                    //横轴的文字是否和数据绑定显示
                     canvas.drawText(horizontalData.get(i).getText(),
                             rectChart.left + mCharWidth / 2 - horizontalTextPaint.measureText(horizontalData.get(i).getText()) / 2,
-                            mViewHeight - 10,
+                            mViewHeight - bottomTextMargin,
                             horizontalTextPaint);
+                } else {
+                    if (i == 0 || i == horizontalData.size() - 1) {
+                        canvas.drawText(horizontalData.get(i).getText(),
+                                rectChart.left + mCharWidth / 2 - horizontalTextPaint.measureText(horizontalData.get(i).getText()) / 2,
+                                mViewHeight - bottomTextMargin,
+                                horizontalTextPaint);
+                    }
                 }
             }
-
 
             //点击监听
             Rect clickRect = null;
@@ -406,7 +458,7 @@ public class BarCharts extends View {
 
             if (DEBUG) {
                 canvas.drawText(i + "", paddingBarLeft + startX + halfResponseWith - mCharWidth / 2,
-                        mAxisStartY - 10,
+                        mAxisStartY - bottomTextMargin,
                         horizontalTextPaint);
                 canvas.drawLine(paddingBarLeft + startX + interval, 0,
                         paddingBarLeft + startX + interval, mAxisStartY,
@@ -416,6 +468,22 @@ public class BarCharts extends View {
             startX = startX + interval;
             //Log.d(TAG, "new startX :" + startX);
         }
+        //绘制非绑定数据横轴文字
+        if (!bindWithHorizontalData) {
+            ArrayList<String> horizonText = mDataBean.getOnlyHorizontalAxisText();
+            float textWith = horizontalTextPaint.measureText(horizonText.get(0));
+            float textHeight = ViewUtils.getLineHeight(horizontalTextPaint);
+            float wh = mAxisEndX - textWith * horizonText.size();
+            float intervalText = wh / (horizonText.size() - 1);
+            float intervalStart = 0;
+            for (int i = 0; i < horizonText.size(); i++) {
+                canvas.drawText(horizonText.get(i),
+                        intervalStart + intervalText * i,
+                        mAxisStartY + textHeight + 5,
+                        horizontalTextPaint);
+                intervalStart += textWith;
+            }
+        }
     }
 
     /**
@@ -424,23 +492,42 @@ public class BarCharts extends View {
      * @param canvas
      * @param rectChart
      */
-    private void drawMulti(Canvas canvas, Rect rectChart) {
+    private void drawMulti(Canvas canvas, Rect rectChart, int position) {
         int top = rectChart.top;
         int bootom;
         int h = rectChart.bottom - rectChart.top;
-        for (int j = 0; j < mMultiColors.length; j++) {
-            int increment = (int) (h * mProportion[j] / 10f);
-            bootom = (int) (top + increment);
-            Rect r1 = new Rect(rectChart.left,
-                    top,
-                    rectChart.right,
-                    bootom
-            );
-            mCharPaint.setColor(mMultiColors[j]);
-            canvas.drawRect(r1, mCharPaint);
-            //Log.d(TAG,"Top :（"+top+","+bootom+")"+"增量："+increment +">>>"+r1.toString());
-            top = bootom;
+        HorizontalAxisBean bean = mDataBean.getHorizontalAxisData().get(position);
+        if (null != bean.getRatio()) {
+            int[] ratio = bean.getRatio();
+            for (int j = 0; j < mMultiColors.length; j++) {
+                int increment = (int) (h * ratio[j] / 10f);
+                bootom = (int) (top + increment);
+                Rect r1 = new Rect(rectChart.left,
+                        top,
+                        rectChart.right,
+                        bootom
+                );
+                mCharPaint.setColor(mMultiColors[j]);
+                canvas.drawRect(r1, mCharPaint);
+                //Log.d(TAG,"Top :（"+top+","+bootom+")"+"增量："+increment +">>>"+r1.toString());
+                top = bootom;
+            }
+        } else {
+            for (int j = 0; j < mMultiColors.length; j++) {
+                int increment = (int) (h * mProportion[j] / 10f);
+                bootom = (int) (top + increment);
+                Rect r1 = new Rect(rectChart.left,
+                        top,
+                        rectChart.right,
+                        bootom
+                );
+                mCharPaint.setColor(mMultiColors[j]);
+                canvas.drawRect(r1, mCharPaint);
+                //Log.d(TAG,"Top :（"+top+","+bootom+")"+"增量："+increment +">>>"+r1.toString());
+                top = bootom;
+            }
         }
+
     }
 
 
@@ -450,15 +537,24 @@ public class BarCharts extends View {
      * @param canvas
      */
     private void drawVerticalAxis(Canvas canvas) {
-        float padding = horizontalTextPaint.measureText(mDataBean.getVerticalAxisData().get(mDataBean.getVerticalAxisData().size() - 1)) + 5;
+        if (null == mDataBean || (mDataBean.getVerticalAxisData().size() < 1 || mDataBean.getHorizontalAxisData().size() < 1)) {
+            return;
+        }
+        float padding = horizontalTextPaint.measureText(mDataBean.getVerticalAxisData().get(mDataBean.getVerticalAxisData().size() - 1)) / 2 + 5;
 
         ArrayList<String> data = mDataBean.getVerticalAxisData();
         float startY = mAxisStartY;
-        float interval = mAxisStartY / data.size();
+        int size = data.size();
+        float strHeight = ViewUtils.getLineHeight(verticalTextPaint);
+        float interval = (mAxisStartY - size * strHeight) / (size - 1);
         for (int i = 0; i < data.size(); i++) {
             canvas.drawText(data.get(i), mAxisEndX + padding, startY, verticalTextPaint);
             //Log.d(TAG, "verticalText :" + data.get(i));
-            startY = startY - interval;
+
+            startY = startY - interval - strHeight;
+            if (startY <= 0) {
+                startY += strHeight;
+            }
         }
 
 
@@ -496,6 +592,7 @@ public class BarCharts extends View {
         mCharBGRectList.clear();
         mCharRectList.clear();
         mClickRectList.clear();
+        mHorizontalTextList.clear();
         this.invalidate();
     }
 
@@ -538,7 +635,7 @@ public class BarCharts extends View {
 
                     for (int i = 0; i < mClickRectList.size(); i++) {
                         if (mClickRectList.get(i).contains(x, y)) {
-                            onItemSelect(i, x, y);
+                            onItemSelect(i);
                         }
                     }
                 }
@@ -563,11 +660,13 @@ public class BarCharts extends View {
         return Math.max(min, current) == Math.min(current, max);
     }
 
-    private void onItemSelect(int itemSelect, int x, int y) {
+    private void onItemSelect(int itemSelect) {
         Log.d(TAG, "选中 ：" + itemSelect);
         if (-1 != itemSelect) {
             drawHighlightChart(itemSelect);
-            mItemSelectListener.onItemSelect(itemSelect);
+            if (null != mItemSelectListener) {
+                mItemSelectListener.onItemSelect(itemSelect);
+            }
         }
 
     }
@@ -600,7 +699,7 @@ public class BarCharts extends View {
         //画柱形图
 
         if (isOpenMulti) {
-            drawMulti(canvas, mCharRectList.get(mHighlightIndex));
+            drawMulti(canvas, mCharRectList.get(mHighlightIndex), mHighlightIndex);
         } else {
             //柱形
             mShader = new LinearGradient(rect.left,
@@ -615,6 +714,37 @@ public class BarCharts extends View {
 
         //画光晕
         canvas.drawRect(rect, outShadowPaint);
+
+        if (showHighlightText) {
+            ArrayList<HorizontalAxisBean> horizontalData = mDataBean.getHorizontalAxisData();
+            String text = horizontalData.get(mHighlightIndex).getText();
+            float x = rect.left - horizontalTextPaint.measureText(text) / 2 + mCharWidth / 2;
+            float y = mViewHeight - bottomTextMargin - 1;
+            //判断压盖关系
+            if (bindWithHorizontalData
+                    && mHighlightIndex != 0
+                    && mHighlightIndex != mDataBean.getHorizontalAxisData().size() - 1) {
+                Rect clipRect = null;
+                //是否覆盖了左侧
+                if (mHorizontalTextList.get(0).contains((int) x, (int) y)) {
+                    clipRect = mHorizontalTextList.get(0);
+                }
+                //是否覆盖了右侧
+                LoggerUtil.d(TAG, "rect 1  :" + mHorizontalTextList.get(1) + ">>" + mHorizontalTextList.get(mHorizontalTextList.size() - 1).contains((int) x, (int) y));
+                if (mHorizontalTextList.get(mHorizontalTextList.size() - 1).contains((int) x, (int) y)
+                        || mHorizontalTextList.get(mHorizontalTextList.size() - 1).contains((int) (x + horizontalTextPaint.measureText(text)), (int) y)) {
+                    clipRect = mHorizontalTextList.get(mHorizontalTextList.size() - 1);
+                }
+                LoggerUtil.d(TAG, "clipRect :" + clipRect);
+                if (null != clipRect) {
+                    Paint p = new Paint();
+                    p.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+                    canvas.drawRect(clipRect, p);
+                }
+                canvas.drawText(text, x, y, horizontalTextPaint);
+
+            }
+        }
     }
 
     /**
@@ -624,6 +754,15 @@ public class BarCharts extends View {
      */
     public void setShowHorizontalAxisText(boolean show) {
         drawHorizontalAxisText = show;
+    }
+
+    /**
+     * 是否绘制高亮选中文字
+     */
+    private boolean showHighlightText = true;
+
+    public void setShowClickHighlightText(boolean show) {
+        showHighlightText = show;
     }
 
     /**
@@ -688,6 +827,20 @@ public class BarCharts extends View {
     }
 
     /**
+     * 设置柱形图右偏移
+     *
+     * @param paddingBarRight
+     */
+    public void setPaddingBarRight(int paddingBarRight) {
+        this.paddingBarRight = paddingBarRight;
+    }
+
+    /**
+     * 分段总比例为10，即各个分段加起来为10
+     */
+    private final static int segmentTotal = 10;
+
+    /**
      * 颜色分段
      *
      * @param proportion 分段比例
@@ -705,7 +858,7 @@ public class BarCharts extends View {
             for (int i : proportion) {
                 p = +i;
             }
-            if (p != 10) {
+            if (p != segmentTotal) {
                 result = false;
             }
             isOpenMulti = true;
@@ -721,4 +874,54 @@ public class BarCharts extends View {
     public void setOnItemSelectListener(OnItemSelectListener listener) {
         mItemSelectListener = listener;
     }
+
+    public void setPositionSelect(int position) {
+        int dataSize = mDataBean.getHorizontalAxisData().size();
+        LoggerUtil.d(TAG, "设置选中 position" + position + ">>size " + dataSize);
+        if (0 < dataSize && position < dataSize) {
+            LoggerUtil.d(TAG, "高亮 ：" + position);
+            drawHighlightChart(position);
+            if (null != mItemSelectListener) {
+                mItemSelectListener.onItemSelect(position);
+            }
+        }
+    }
+
+    public void setPaddingRight(int paddingRight) {
+        this.paddingRight = paddingRight;
+    }
+
+    /**
+     * 横向文字是否和数据绑定绘制
+     *
+     * @param bindWithHorizontalData
+     */
+    public void setBindWithHorizontalData(boolean bindWithHorizontalData) {
+        this.bindWithHorizontalData = bindWithHorizontalData;
+    }
+
+    public void setDrawCharBGNoData(boolean draw) {
+        drawCharBGNoData = draw;
+    }
+    //使用方式
+    //        ArrayList<HorizontalAxisBean> date = new ArrayList<>();
+//        ArrayList<String> time = new ArrayList<>();
+//        Random random = new Random();
+//        for (int i = 0; i <31; i++) {
+//            HorizontalAxisBean bean = new HorizontalAxisBean("12月"+(10+i)+"日",random.nextInt(10));
+//            date.add(bean);
+//        }
+//        for (int i = 0; i < 5; i++) {
+//            time.add(i*3+"");
+//        }
+//
+//        DataBean dataBean = new DataBean(date,time);
+//        dataBean.setVerticalMaxData(5*3);
+
+//        mBarCharts.setPartition(4,25);
+//        mBarCharts.setShowHorizontalAxisText(false);
+//        mBarCharts.setPaddingBarLeft(43);
+//        mBarCharts.setCharWidth(18);
+//        mBarCharts.setMulticoloured(true,new int[]{2,5,3},new int []{0xff4E61CA,0xff35458D,0xff1E2653});
+//        mBarCharts.setDataBean(dataBean);
 }
