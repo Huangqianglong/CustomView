@@ -7,15 +7,20 @@ import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
 import android.graphics.Shader;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.hql.customview.OnItemSelectListener;
 import com.hql.customview.ViewUtils;
 
 import java.util.ArrayList;
@@ -52,28 +57,51 @@ public class CurveView extends View {
      */
     private Paint verticalTextPaint;
     /**
-     * 横轴虚线画笔
+     * 高亮圆点笔
+     */
+    private Paint highlightPaint;
+
+    /**
+     * 圆环颜色
+     */
+    private int circleRingColor= Color.parseColor("#FFFFFF");
+    /**
+     * 圆心颜色
+     */
+    private int circlePointColor= Color.parseColor("#3B97A3");
+    /**
+     * 画阴影
      */
     private Paint curvePaint;
 
     /**
-     * 设置横轴背景线颜色
-     *
-     * @param horizontalLineColor
+     * 曲线颜色
      */
-    public void setHorizontalLineColor(int horizontalLineColor) {
-        this.horizontalLineColor = horizontalLineColor;
-    }
-
+    private int curveColor = Color.parseColor("#D64E6F");
+    /**
+     * 画阴影
+     */
+    private Paint curvePaint2;
+    private Paint tailorPaint;
     /**
      * 横轴背景线颜色
      */
-    private int horizontalLineColor = Color.WHITE;//0xff353A4B;
+    private int horizontalLineColor = 0xff353A4B;
+
     private CurveData mData;
     /**
      * 横轴背景线画笔
      */
     private Paint horizontalLinePaint;
+    /**
+     * 是否绘制高亮状态
+     */
+    boolean isDrawHighlight = false;
+    /**
+     * 选中高亮的index
+     */
+    private int mHighlightIndex;
+    private LinearGradient mShader;
 
     public CurveView(Context context) {
         super(context);
@@ -113,12 +141,41 @@ public class CurveView extends View {
 
         //曲线笔
         curvePaint = new Paint();
-        curvePaint.setColor(Color.GREEN);
+        curvePaint.setColor(curveColor);
         curvePaint.setAntiAlias(true);
-        curvePaint.setStyle(Paint.Style.FILL);
-        //curvePaint.setStyle(Paint.Style.STROKE);
+        //curvePaint.setStyle(Paint.Style.FILL);
+        curvePaint.setStyle(Paint.Style.STROKE);
         curvePaint.setTextSize(28f);
-        curvePaint.setStrokeWidth(3f);
+        curvePaint.setStrokeWidth(10f);
+
+        curvePaint2 = new Paint();
+        curvePaint2.setColor(curveColor);
+        curvePaint2.setAntiAlias(true);
+        //curvePaint.setStyle(Paint.Style.FILL);
+        curvePaint2.setStyle(Paint.Style.FILL);
+        curvePaint2.setTextSize(28f);
+        curvePaint2.setStrokeWidth(5f);
+        curvePaint2.setShader(mShader);
+        curvePaint2.setShadowLayer(150, 10, 10, Color.parseColor("#FF506D"));
+
+
+        tailorPaint = new Paint();
+        tailorPaint.setStyle(Paint.Style.FILL);
+        tailorPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.XOR));
+        tailorPaint.setShader(null);
+
+        highlightPaint = new Paint();
+        highlightPaint.setAntiAlias(true);
+        highlightPaint.setStyle(Paint.Style.FILL);
+
+        mShader = new LinearGradient(mAxisEndX / 2,
+                //按比例计算高度
+                0,
+                mAxisEndX / 2,
+                mAxisStartY,
+                new int[]{shadowColor1, shadowColor2}, new float[]{0.6f, 0.9f},
+                //Color.RED, 0xff000000,
+                Shader.TileMode.MIRROR);
     }
 
     @Override
@@ -144,6 +201,10 @@ public class CurveView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         drawCoordinateAxis(canvas);
+        if (isDrawHighlight) {
+            drawHighlightChart(canvas);
+            isDrawHighlight = false;
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.Q)
@@ -171,30 +232,23 @@ public class CurveView extends View {
             endX = mAxisEndX;
         }
 
-        //画纵向的几个横线 和纵轴的文字
-        float interval = mAxisStartY / mData.getVerticalAxisTex().size();
-        if (mData.getVerticalAxisTex().size() == 0) {
-            canvas.drawLine(0, height, endX, height, horizontalLinePaint);
-        } else {
-            ArrayList<String> textList = mData.getVerticalAxisTex();
-            int i = 0;
-            while (height > 0) {
-                canvas.drawLine(0, height, endX, height, horizontalLinePaint);
-                if (i < textList.size()) {
-                    canvas.drawText(textList.get(i), endX + 5, height, horizontalLinePaint);
-                }
-                i++;
-                height = height - interval;
-
-            }
-        }
+        //间距
+        float interval ;
 
 
+        // 曲线
         Path curPath = new Path();
-
+        Path path2 = new Path();
         ArrayList<Integer> points = mData.getHeartBeatData();
         interval = mAxisEndX / (points.size() - 1);
         for (int i = 0; i < points.size(); i++) {
+            if (i > mClickRectList.size() - 1) {
+                mClickRectList.add(new Rect((int) (interval * i - interval / 2),
+                        0,
+                        (int) (interval * i + interval / 2),
+                        (int) mAxisStartY
+                ));
+            }
             float y = mData.getHeartBeatData().get(i) / mData.getMaxData() * mAxisStartY;
 
             Point startPoint = new Point((int) (interval * i), (int) y);
@@ -202,11 +256,6 @@ public class CurveView extends View {
             if (i != points.size() - 1) {
                 float yNext;
                 yNext = mData.getHeartBeatData().get(i + 1) / mData.getMaxData() * mAxisStartY;
-//            if (i < points.size() -1){
-//                yNext = mData.getHeartBeatData().get(i + 1) / mData.getMaxData() * mAxisStartY;
-//            } else{
-//                yNext = mData.getHeartBeatData().get(i) / mData.getMaxData() * mAxisStartY;
-//            }
 
                 nextPoint = new Point((int) (interval * (i + 1)), (int) yNext);
 
@@ -221,6 +270,7 @@ public class CurveView extends View {
 
                 if (i == 0) {
                     curPath.moveTo(startPoint.x, startPoint.y);
+                    path2.moveTo(startPoint.x, startPoint.y);
                     //canvas.drawCircle(startPoint.x, startPoint.y,3,horizontalTextPaint);
                 }
                 /**
@@ -237,38 +287,182 @@ public class CurveView extends View {
                  *
                  */
                 curPath.cubicTo(p3.x, p3.y, p4.x, p4.y, nextPoint.x, nextPoint.y);
-                Log.d(TAG, "(" + interval * i + "," + y + ")" + ">>>end" + mAxisEndX + ">>interval:" + interval);
+                path2.cubicTo(p3.x, p3.y, p4.x, p4.y, nextPoint.x, nextPoint.y);
+                //Log.d(TAG, "(" + interval * i + "," + y + ")" + ">>>end" + mAxisEndX + ">>interval:" + interval);
             } else {
                 //   if (i == points.size() ){
                 y = mData.getHeartBeatData().get(mData.getHeartBeatData().size() - 1) / mData.getMaxData() * mAxisStartY;
                 canvas.drawCircle(mAxisEndX, y, 3, horizontalLinePaint);
-                //curPath.lineTo(mAxisEndX, y);
+
+//                /**连接到终点x,底部y*/
+//                curPath.lineTo(mAxisEndX, mAxisStartY);
+//                /**连接到起点x,底部y*/
+//                curPath.lineTo(0, mAxisStartY);
+//                /**连接到起点x,起点y*/
+//                curPath.lineTo(0, mData.getHeartBeatData().get(0) / mData.getMaxData() * mAxisStartY);
+
+
                 /**连接到终点x,底部y*/
-                curPath.lineTo(mAxisEndX, mAxisStartY);
+                path2.lineTo(mAxisEndX, 0);
                 /**连接到起点x,底部y*/
-                curPath.lineTo(0, mAxisStartY);
+                path2.lineTo(0, 0);
                 /**连接到起点x,起点y*/
-                curPath.lineTo(0, mData.getHeartBeatData().get(0) / mData.getMaxData() * mAxisStartY);
+                path2.lineTo(0, mAxisStartY - mData.getHeartBeatData().get(0) / mData.getMaxData() * mAxisStartY);
             }
-
-
-            Log.d(TAG, "(" + interval * i + "," + y + ")" + ">>>end" + mAxisEndX + ">>interval:" + interval);
+            //Log.d(TAG, "(" + interval * i + "," + y + ")" + ">>>end" + mAxisEndX + ">>interval:" + interval);
         }
 
 
-        LinearGradient mShader = new LinearGradient(mAxisEndX / 2,
-                //按比例计算高度
-                0,
-                mAxisEndX / 2,
-                mAxisStartY,
-                new int[]{Color.parseColor("#BAEFE6"), Color.parseColor("#00000000")}, new float[]{0.6f, 0.9f},
-                //Color.RED, 0xff000000,
-                Shader.TileMode.MIRROR);
-        curvePaint.setShader(mShader);
+        //画下半部
         canvas.drawPath(curPath, curvePaint);
+        //画上半部分
+        canvas.drawPath(path2, curvePaint2);
+        //裁剪上半部分，取阴影,并剪切阴影多余的部分
+        canvas.drawPath(path2, tailorPaint);
+        canvas.drawRect(mAxisEndX, 0, mViewWidth, mViewHeight, tailorPaint);
+        canvas.drawRect(0, mAxisStartY, mViewWidth, mViewHeight, tailorPaint);
+
+
+        //画纵向的几个横线 和纵轴的文字
+        if (mData.getVerticalAxisTex().size() == 0) {
+            canvas.drawLine(0, height, endX, height, verticalTextPaint);
+        } else {
+            ArrayList<String> textList = mData.getVerticalAxisTex();
+            int i = 0;
+            while (height > 0) {
+                canvas.drawLine(0, height, endX, height, verticalTextPaint);
+                if (i < textList.size()) {
+                    canvas.drawText(textList.get(i), endX + 5, height, verticalTextPaint);
+                }
+                i++;
+                height = height - interval;
+
+            }
+        }
+
+        //画横轴文字
+        ArrayList<String> horizonText = mData.getHorizontalAxisTex();
+        float textWith = horizontalTextPaint.measureText(horizonText.get(0));
+        float textHeight = ViewUtils.getLineHeight(horizontalTextPaint);
+        float wh = mAxisEndX - textWith * horizonText.size();
+        float intervalText = wh / (horizonText.size() - 1);
+        float intervalStart = 0;
+        for (int i = 0; i < horizonText.size(); i++) {
+            canvas.drawText(horizonText.get(i),
+                    intervalStart + intervalText * i,
+                    mAxisStartY + textHeight + 5,
+                    horizontalTextPaint);
+            intervalStart += textWith;
+        }
+
+
     }
+
+    private ArrayList<Rect> mClickRectList = new ArrayList<>();
 
     public void setData(CurveData data) {
         this.mData = data;
+        mClickRectList.clear();
     }
+
+    boolean isFullModel = false;
+    private int maxIndex;
+
+    /**
+     * 横轴是否全部填充
+     */
+    public void isFullModel(boolean full, int max) {
+        isFullModel = full;
+        maxIndex = max;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int x = (int) event.getX();
+        int y = (int) event.getY();
+        int action = event.getAction();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                break;
+            case MotionEvent.ACTION_MOVE:
+                break;
+            case MotionEvent.ACTION_UP:
+                //Log.d(TAG, "ACTION_UP事件");
+                if (x + getLeft() < getRight() && y + getTop() < getBottom() && x < mAxisEndX) {
+                    Log.d(TAG, "点击事件 x:" + x);
+
+                    for (int i = 0; i < mClickRectList.size(); i++) {
+                        if (mClickRectList.get(i).contains(x, y)) {
+                            onItemSelect(i, x, y);
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+
+        return true;
+    }
+
+    private void onItemSelect(int itemSelect, int x, int y) {
+        Log.d(TAG, "选中 ：" + itemSelect);
+        if (-1 != itemSelect) {
+            drawHighlightChart(itemSelect);
+            if (null != mItemSelectListener) {
+                mItemSelectListener.onItemSelect(itemSelect);
+            }
+
+        }
+
+    }
+
+    private void drawHighlightChart(int position) {
+        isDrawHighlight = true;
+        mHighlightIndex = position;
+        invalidate();
+        //drawHighlightChart(mCanvas);
+    }
+
+    /**
+     * 绘制高亮
+     *
+     * @param canvas
+     */
+    private void drawHighlightChart(Canvas canvas) {
+        ArrayList<Integer> points = mData.getHeartBeatData();
+        float interval = mAxisEndX / (points.size() - 1);
+        float y = mData.getHeartBeatData().get(mHighlightIndex) / mData.getMaxData() * mAxisStartY;
+        highlightPaint.setColor(circleRingColor);
+        canvas.drawCircle(interval * mHighlightIndex, y, 10, highlightPaint);
+        highlightPaint.setColor(circlePointColor);
+        canvas.drawCircle(interval * mHighlightIndex, y, 6, highlightPaint);
+    }
+
+    private OnItemSelectListener mItemSelectListener;
+
+    public void setOnItemSelectListener(OnItemSelectListener listener) {
+        mItemSelectListener = listener;
+    }
+
+    private int shadowColor1 = Color.parseColor("#FF4E7D");
+    private int shadowColor2 = Color.parseColor("#FF8989");
+
+    /**
+     * 阴影色
+     */
+    public void setShadowColor(int color1, int color2) {
+        shadowColor1 = color1;
+        shadowColor2 = color2;
+    }
+    /**
+     * 设置横轴背景线颜色
+     *
+     * @param horizontalLineColor
+     */
+    public void setHorizontalLineColor(int horizontalLineColor) {
+        this.horizontalLineColor = horizontalLineColor;
+    }
+
+
 }
